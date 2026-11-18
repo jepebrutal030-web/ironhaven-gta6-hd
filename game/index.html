@@ -3,17 +3,139 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block Dodger</title>
+<link rel="icon" href="data:,">
+<title>IRONHAVEN — open-world crime game</title>
+<meta name="description" content="IRONHAVEN — an original open-world crime game. Explore a sun-soaked port city on foot and by car, steal cars, run missions, outrun the law.">
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141b; }
-  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
-  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0e14; font-family: "Segoe UI", Arial, sans-serif; color: #fff; }
+#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+.panel { background: rgba(8, 12, 18, 0.72); border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; padding: 10px 14px; backdrop-filter: blur(2px); }
+#topleft { position: absolute; top: 14px; left: 14px; min-width: 250px; }
+#healthbar { height: 12px; background: rgba(255,255,255,0.15); border-radius: 6px; overflow: hidden; margin-bottom: 6px; }
+#health-fill { height: 100%; width: 100%; background: #e8b23a; border-radius: 6px; transition: width 0.2s; }
+#health-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; }
+#money { font-size: 24px; font-weight: 800; color: #ffd428; letter-spacing: 0.5px; }
+#stars { font-size: 20px; letter-spacing: 3px; color: rgba(255,255,255,0.25); }
+#stars .on { color: #ffd428; text-shadow: 0 0 8px rgba(255,210,40,0.8); }
+#stars.hot .on { color: #ff4040; text-shadow: 0 0 8px rgba(255,64,64,0.9); }
+#minimap { position: absolute; top: 14px; right: 14px; width: 220px; height: 220px; border: 2px solid rgba(255,255,255,0.25); border-radius: 8px; background: #0a0e14; }
+#minimap-label { position: absolute; top: 238px; right: 14px; font-size: 11px; letter-spacing: 3px; color: rgba(255,255,255,0.65); text-align: right; }
+#banner { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); background: rgba(8,12,18,0.85); border: 1px solid rgba(255,210,40,0.5); border-radius: 8px; padding: 12px 28px; font-size: 22px; font-weight: 800; letter-spacing: 1px; opacity: 0; transition: opacity 0.3s; white-space: nowrap; }
+#banner.show { opacity: 1; }
+#payout { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 56px; font-weight: 900; color: #ffd428; text-shadow: 0 2px 18px rgba(0,0,0,0.8); opacity: 0; transition: opacity 0.3s; }
+#payout.show { opacity: 1; }
+#objective { position: absolute; left: 14px; bottom: 14px; max-width: 420px; }
+#obj-text { font-size: 15px; font-weight: 700; line-height: 1.45; white-space: pre-line; }
+#obj-meta { font-size: 13px; color: #ffd428; margin-top: 4px; font-weight: 700; }
+#obj-timer.urgent { color: #ff4040; }
+#speedbox { position: absolute; right: 14px; bottom: 14px; text-align: right; }
+#speed { font-size: 44px; font-weight: 900; line-height: 1; }
+#speed-unit { font-size: 13px; color: rgba(255,255,255,0.7); }
+#weaponbox { font-size: 15px; font-weight: 700; margin-top: 4px; color: #ffd428; }
+#ammo.low { color: #ff4040; }
+#crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; display: none; }
+#crosshair::before, #crosshair::after { content: ""; position: absolute; background: rgba(255,255,255,0.9); }
+#crosshair::before { left: 10px; top: 0; width: 2px; height: 22px; }
+#crosshair::after { left: 0; top: 10px; width: 22px; height: 2px; }
+#hitmarker { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; opacity: 0; }
+#hitmarker.show { opacity: 1; }
+#hitmarker::before, #hitmarker::after { content: ""; position: absolute; left: 15px; top: 0; width: 3px; height: 34px; background: #ff4040; }
+#hitmarker::before { transform: rotate(45deg); }
+#hitmarker::after { transform: rotate(-45deg); }
+#vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(200,0,0,0.55) 100%); opacity: 0; }
+#toast { position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%); background: rgba(8,12,18,0.85); border-radius: 8px; padding: 8px 18px; font-size: 15px; font-weight: 700; opacity: 0; transition: opacity 0.3s; }
+#toast.show { opacity: 1; }
+.screen { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(180deg, rgba(6,8,14,0.55), rgba(6,8,14,0.88)); pointer-events: none; text-align: center; padding: 20px; }
+.screen.hidden { display: none; }
+.screen h1 { font-size: 72px; font-weight: 900; letter-spacing: 6px; color: #fff; text-shadow: 0 0 30px rgba(255,0,110,0.6), 0 4px 0 rgba(0,0,0,0.4); }
+.screen h1 span { color: #00e5ff; }
+.screen h2 { font-size: 44px; font-weight: 900; letter-spacing: 4px; }
+.screen p { font-size: 17px; color: rgba(255,255,255,0.85); margin: 10px 0 22px; max-width: 560px; line-height: 1.5; }
+.screen .sub { font-size: 13px; letter-spacing: 5px; color: #00e5ff; font-weight: 700; margin-bottom: 6px; }
+.btn { pointer-events: auto; cursor: pointer; border: 2px solid #ff006e; background: rgba(255,0,110,0.2); color: #fff; font-size: 19px; font-weight: 800; letter-spacing: 2px; padding: 14px 42px; border-radius: 999px; margin: 6px; box-shadow: 0 0 22px rgba(255,0,110,0.4); }
+.btn:hover { background: rgba(255,0,110,0.45); }
+.btn.ghost { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.08); box-shadow: none; }
+.btn.hidden { display: none; }
+.controls { margin-top: 26px; font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.9; }
+.controls b { color: #ffd428; }
+#screen-busted h2 { color: #ff4040; text-shadow: 0 0 24px rgba(255,64,64,0.7); }
+#screen-wasted h2 { color: #ff4040; text-shadow: 0 0 24px rgba(255,64,64,0.7); }
+#ending-money { font-size: 40px; font-weight: 900; color: #ffd428; margin: 8px 0 18px; }
+@media (max-width: 900px) { .screen h1 { font-size: 44px; } #minimap { width: 150px; height: 150px; } #minimap-label { top: 168px; } }
 </style>
 </head>
 <body>
-<canvas id="game" aria-label="Block Dodger: move the paddle left and right to dodge falling blocks and catch coins"></canvas>
-<p id="status" role="status" aria-live="polite"></p>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div id="topleft" class="panel">
+    <div id="healthbar"><div id="health-fill"></div></div>
+    <div id="health-row"><span>HEALTH</span><span id="health-num">100</span></div>
+    <div id="money">$0</div>
+    <div id="stars">★★★★★</div>
+  </div>
+  <canvas id="minimap" width="220" height="220"></canvas>
+  <div id="minimap-label">I R O N H A V E N</div>
+  <div id="banner"></div>
+  <div id="payout"></div>
+  <div id="objective" class="panel">
+    <div id="obj-text">MISSION 1 — HOMECOMING</div>
+    <div id="obj-meta"><span id="obj-dist"></span> <span id="obj-timer"></span></div>
+  </div>
+  <div id="speedbox" class="panel">
+    <div><span id="speed">0</span> <span id="speed-unit">mph</span></div>
+    <div id="weaponbox"><span id="weapon-name">PISTOL</span> &nbsp; <span id="ammo">12 / 48</span></div>
+  </div>
+  <div id="crosshair"></div>
+  <div id="hitmarker"></div>
+  <div id="vignette"></div>
+  <div id="toast"></div>
+</div>
+
+<div id="screen-start" class="screen">
+  <div class="sub">OPEN-WORLD CRIME GAME</div>
+  <h1>IRON<span>HAVEN</span></h1>
+  <p>Five missions. One city. No rules. Steal cars, run jobs for Mara, and outrun the Ironhaven PD — from the downtown towers to the harbor docks.</p>
+  <button class="btn" id="btn-new">▶&nbsp; NEW GAME</button>
+  <button class="btn ghost" id="btn-continue">CONTINUE</button>
+  <div class="controls">
+    <b>WASD</b> move / drive &nbsp;·&nbsp; <b>Mouse</b> look (click to lock) &nbsp;·&nbsp; <b>Click</b> shoot &nbsp;·&nbsp; <b>R</b> reload<br>
+    <b>E</b> enter / exit car &nbsp;·&nbsp; <b>Shift</b> sprint / boost &nbsp;·&nbsp; <b>Space</b> jump / handbrake<br>
+    <b>1 / 2 / 3</b> weapons &nbsp;·&nbsp; <b>P</b> pause &nbsp;·&nbsp; <b>M</b> mute
+  </div>
+</div>
+
+<div id="screen-pause" class="screen hidden">
+  <h2>PAUSED</h2>
+  <p>Take a breath. The city waits.</p>
+  <button class="btn" id="btn-resume">RESUME</button>
+</div>
+
+<div id="screen-busted" class="screen hidden">
+  <h2>BUSTED</h2>
+  <p>The Ironhaven PD caught up with you. Mara posts your bail — get back out there.</p>
+  <button class="btn" id="btn-busted">RESPAWN</button>
+</div>
+
+<div id="screen-wasted" class="screen hidden">
+  <h2>WASTED</h2>
+  <p>That one hurt. The crew drags you to the safehouse.</p>
+  <button class="btn" id="btn-wasted">RESPAWN</button>
+</div>
+
+<div id="screen-ending" class="screen hidden">
+  <div class="sub">STORY COMPLETE</div>
+  <h2>IRONHAVEN IS YOURS</h2>
+  <p>All five jobs done. Mara's cut is safe, the harbor is quiet, and the city knows your name.</p>
+  <div id="ending-money">$0</div>
+  <button class="btn" id="btn-again">PLAY AGAIN</button>
+  <button class="btn ghost" id="btn-menu">MENU</button>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js" } }
+</script>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
